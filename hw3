@@ -1,0 +1,41 @@
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from behave import given, when, then
+import time
+
+@given('I open the Target homepage')
+def step_open_target(context):
+    context.driver = webdriver.Chrome()
+    context.driver.get("https://www.target.com")
+    context.driver.maximize_window()
+    time.sleep(3)
+
+@when('I click on the Cart icon')
+def step_click_cart(context):
+    cart_icon = context.driver.find_element(By.ID, "utilityNav-cart")
+    cart_icon.click()
+    time.sleep(3)
+
+@then('I should see the message "Your cart is empty"')
+def step_verify_empty_cart(context):
+    empty_text = context.driver.find_element(By.XPATH, "//*[contains(text(), 'Your cart is empty')]")
+    assert "Your cart is empty" in empty_text.text
+    context.driver.quit()
+
+@when('I click on the Sign In button')
+def step_click_signin_button(context):
+    signin = context.driver.find_element(By.XPATH, "//span[text()='Sign in']")
+    signin.click()
+    time.sleep(2)
+
+@when('I click Sign In from the right side menu')
+def step_click_signin_menu(context):
+    menu_signin = context.driver.find_element(By.XPATH, "//a[@data-test='accountNav-signIn']")
+    menu_signin.click()
+    time.sleep(3)
+
+@then('I should see the Sign In form')
+def step_verify_signin_form(context):
+    form_header = context.driver.find_element(By.XPATH, "//h1[contains(text(),'Sign into your Target account')]")
+    assert "Sign into your Target account" in form_header.text
+    context.driver.quit()
