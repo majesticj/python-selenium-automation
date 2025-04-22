@@ -1,6 +1,6 @@
 
 ##outline
-#app
+#ap
 _init_.py
 application.py
 #features
@@ -14,6 +14,8 @@ search_results_steps.py
 _init_.py
 cart.feature
 main_page_ui-tests.feature
+product_details.feature
+product_search.feature
 target_search.feature
 -init_.py
 -enviroment.py
@@ -22,6 +24,7 @@ _init_.py
 base_page.py
 header.py
 main_page.py
+home_page.py
 search_results_page.py
 --gitignore
 --readme.md
@@ -37,10 +40,10 @@ search_results_page.py
 
 #under app, then click application.py
 
-from pages base_page Import Page
+from pages.base_page import Page
 from pages.header import Header
-from pages.main.page import MainPage
-from pages.search_results_page import SearchResutsPage
+from pages.main_page import MainPage
+from pages.search_results_page import SearchResultsPage
 
 
 class Application:
@@ -49,17 +52,35 @@ class Application:
         self.driver = driver
         self.main_page = MainPage(driver)
         self.header =Header(driver)
-        self.search_results_page = SearchResutsPage(driver)
+        self.search_results_page = SearchResultsPage(driver)
 
 
 #under feature, then click steps, then cart_steps.py
+
+from behave import given, when, then
+from pages.home_page import HomePage
+from pages.cart_page import CartPage
+
+@given('Open Target main page')
+def step_open_main_page(context):
+    context.home_page = HomePage(context.driver)
+    context.home_page.load()
+
+@when('Click on cart icon')
+def step_click_cart(context):
+    context.home_page.click_cart()
+    context.cart_page = CartPage(context.driver)
+
+@then('Verify Cart Empty message shown')
+def step_verify_cart_empty_message(context):
+    assert context.cart_page.is_cart_empty_message_displayed(), "Empty cart message not displayed"
+
 
 from selenium.webdriver.common.by import By
 from behave import given, when, then
 
 CART_SUMMARY = (By.XPATH, "//div[./span[contains(text(), 'subtotal')]]")
 CART_ITEM_TITLE = (By.CSS_SELECTOR, "[data-test='cartItem-title']")
-
 
 @when('Open cart page')
 def open_cart(context):
@@ -85,43 +106,31 @@ def verify_cart_items(context, amount):
     cart_summary = context.driver.find_element(*CART_SUMMARY).text
     assert f'{amount} item' in cart_summary, f"Expected {amount} items but got {cart_summary}"
 
+
 #under features, steps and main_page_steps.py
 
 from selenium.webdriver.common.by import By
 from behave import given, when, then
 
-SEARCH_FIELD = (By.ID, 'search')
-SEARCH_BTN = (By.XPATH, "//button[@data-test=@web/Search/SearchButton']"
-CART_ICON = (By.CSS_SELECTOR, "[id*'utilityNav']")
-
 @given('Open target main page')
-def open_target_main(context):
+def open_main(context):
     context.app.main_page.open_main_page()
-Context.driver.wait.until(
-EC.element_to.be_clickable(SEARCH_FIELD).
-message= 'Search field not clickable'
-
 
 @when('Click on cart icon')
 def click_cart(context):
     context.driver.find_element(By.CSS_SELECTOR, "[data-test='@web/CartLink']").click()
 
 
-@when('Search for {search_word}')
-def search_product(context, search_word):
-    context.app.header.search()
+@when('Search for {item}')
+def search_product(context, item):
+    context.app.header.search(item)
+
 
 @then('Verify header has {expected_amount} links')
 def verify_header_links(context, expected_amount):
     expected_amount = int(expected_amount) # '6' => 6
     links = context.driver.find_elements(By.CSS_SELECTOR, "[data-test*='@web/GlobalHeader/UtilityHeader/']")
     assert len(links) == expected_amount, f'Expected {expected_amount} links but got {len(links)}'
-
-
-@then('Verify header is shown')
-def verify_header(context):
-    context.driver.find_element(By.CSS_SELECTOR, "[class*='styles_utilityHeaderContainer']")
-
 
 #under features, stpes and product_details_steps.py
 
@@ -179,6 +188,7 @@ def click_add_to_cart(context):
         EC.visibility_of_element_located(SIDE_NAV_PRODUCT_NAME),
         message='Side navigation product name not visible'
     )
+
 
 @when('Store product name')
 def store_product_name(context):
@@ -324,39 +334,86 @@ def after_scenario(context, feature):
     context.driver.delete_all_cookies()
     context.driver.quit()
 
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+
+def before_all(context):
+    options = Options()
+    options.add_argument("--start-maximized")
+    service = Service()
+    context.driver = webdriver.Chrome(service=service, options=options)
+
+def after_all(context):
+    context.driver.quit()
+
+
 #pages and base_page.py
 
 class Page:
 
-    def__init (self.driver):
-    self.driver = driver
+    def __init__(self, driver):
+        self.driver = driver
 
-    def open.url(self,url)
-    self.driver.get(url)
+    def open_url(self, url):
+        self.driver.get(url)
 
-    def find_element(self. *locater):
-    self.driver.find_element(*locater)
+    def find_element(self,  *locater):
+        self.driver.find_element(*locater)
 
-    def click(selfslef, *locator):
-        self.driver.find_element(*locator) click()
+    def click(self, *locator):
+        self.driver.find_element(*locator).click()
 
-        def input_text(self.text, *locator):
-        self.driver.find_element(*locator) send_keys(text
+    def input_text(self, text, *locator):
+        self.driver.find_element(*locator).send_keys(text)
+
+#home_page.py
+
+from selenium.webdriver.common.by import By
+
+class HomePage:
+    URL = "https://www.target.com"
+    CART_ICON = (By.ID, "utilityNav-cart")
+
+    def __init__(self, driver):
+        self.driver = driver
+
+    def load(self):
+        self.driver.get(self.URL)
+
+    def click_cart(self):
+        self.driver.find_element(*self.CART_ICON).click()
+
+#cart_page.py
+
+from selenium.webdriver.common.by import By
+
+class CartPage:
+    EMPTY_CART_MESSAGE = (By.XPATH, "//*[contains(text(),'Your cart is empty')]")
+
+    def __init__(self, driver):
+        self.driver = driver
+
+    def is_cart_empty_message_displayed(self):
+        return self.driver.find_element(*self.EMPTY_CART_MESSAGE).is_displayed()
+
 
 
 #header.py
 
-from slenium.webdriver.common.by import By
-from pages.base.page import Page
+from selenium.webdriver.common.by import By
+from pages.base_page import Page
+from time import sleep
 
-class.Header(page):
+class Header(Page):
 
-SEARCH_FIELD = (By, ID 'search')
-SEARCH_BTN = (By.XPATH, "//button[@data-test= @web/search/button")
+    SEARCH_FIELD = (By.ID, 'search')
+    SEARCH_BTN = (By.CSS_SELECTOR, '[data-test="@web/Search/SearchButton"]')
 
-    def search(self):
-        self.input.text(text 'tea, self.SEARCH_FIELD)
+    def search(self, text):
+        self.input_text(text, *self.SEARCH_FIELD)
         self.click(*self.SEARCH_BTN)
+        sleep(5)
 
 
 #main_page.py
